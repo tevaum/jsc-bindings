@@ -5,7 +5,8 @@
 
 /**
  * This is a native callback that will be exposed
- * as a javascript function.
+ * as a javascript function. Note that there's no
+ * JavaScriptCore types referenced here.
  */
 static GJSCValue *
 huvsnivs (GJSCObject *function,
