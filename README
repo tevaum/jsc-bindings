@@ -1,7 +1,7 @@
 This is just a proof of concept of how would look like a GObject API for JavaScriptCore.
 
 * main.c is the client using the API.
-* javascriptcore/javascript.j is the main header for the API
+* javascriptcore/javascript.h is the main header for the API
 * javascriptcore/javascript.c is the implementation
 
 With this POC API we are able to:
