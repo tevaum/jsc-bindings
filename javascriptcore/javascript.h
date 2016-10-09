@@ -31,12 +31,7 @@ GJSCValue *jscore_context_evaluate_script(JSContextRef ctx, gchar *script);
 GJSCObject *
 jscore_object_make_function_with_callback(GJSCObject *obj,
 					  const gchar *name,
-					  JSObjectCallAsFunctionCallback callback);
-
-GJSCObject *
-jscore_object_make_function_with_callback_new(GJSCObject *obj,
-					      const gchar *name,
-					      GJSCNativeCallback callback);
+					  GJSCNativeCallback callback);
 
 gboolean jscore_object_has_property(GJSCObject *obj, const gchar *property_name);
 GJSCValue *jscore_object_get_property(GJSCObject *obj, const gchar *property_name);

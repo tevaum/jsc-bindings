@@ -1,9 +1,15 @@
 #include "javascript.h"
 
-/* typedef struct _GNativeCBTreeNode { */
-/*   GJSCObject function; */
-/*   GJSCNativeCallback callback; */
-/* } GNativeCBTreeNode; */
+/**
+ * To be able to use our own callbacks without referencing JavaScriptCore
+ * types directly on the client code, I created a JavaScriptCore compatible
+ * callback inside the library (internal_native_bridge) that, when called,
+ * looks for our newly typed callback (GJSCNativeCallback) on a GTree, indexed
+ * by the JSObjectRef of the object built by JSObjectMakeFunctionWithCallback
+ * on the jscore_object_make_function_with_callback API. Thus the need of
+ * jscore_init, to setup the GTree.
+ */
+GTree *native_callback_tree = NULL;
 
 gint tree_compare_func(gconstpointer a, gconstpointer b) {
   if (a < b)
@@ -12,8 +18,6 @@ gint tree_compare_func(gconstpointer a, gconstpointer b) {
     return 1;
   return 0;
 }
-
-GTree *native_callback_tree = NULL;
 
 void
 jscore_init()
@@ -52,7 +56,7 @@ internal_native_bridge (JSContextRef ctx,
   //handling parameters
   for (int i = 0; i < n_args; i++) {
     JSValueRef arg = args[i];
-    GJSCValue *val = g_new0(GJSCValue, 1);
+    GJSCValue *val = g_new0(GJSCValue, 1); //but don't cause segfaults here... :P
     val->context = ctx;
     val->instance = arg;
 
@@ -63,7 +67,6 @@ internal_native_bridge (JSContextRef ctx,
   if (res)
     return res->instance;
   return NULL;
-  //return res->instance;
 }
 
 GJSCValue *
@@ -107,7 +110,7 @@ jscore_object_get_property(GJSCObject *obj, const gchar *property_name)
 }
 
 GJSCObject *
-jscore_object_make_function_with_callback_new(GJSCObject *obj,
+jscore_object_make_function_with_callback(GJSCObject *obj,
 					      const gchar *name,
 					      GJSCNativeCallback callback)
 {
@@ -121,23 +124,6 @@ jscore_object_make_function_with_callback_new(GJSCObject *obj,
   jscore_object_set_property_from_object(obj, name, result);
 
   g_tree_insert(native_callback_tree, (gpointer) func, (gpointer) callback);
-  return result;
-}
-
-GJSCObject *
-jscore_object_make_function_with_callback(GJSCObject *obj,
-					  const gchar *name,
-					  JSObjectCallAsFunctionCallback callback)
-{
-  GJSCObject *result = g_new0(GJSCObject, 1);
-
-  JSObjectRef func = JSObjectMakeFunctionWithCallback(obj->context, NULL, callback);
-
-  result->context = obj->context;
-  result->instance = func;
-
-  jscore_object_set_property_from_object(obj, name, result);
-
   return result;
 }
 
