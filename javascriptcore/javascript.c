@@ -9,20 +9,18 @@
  * on the jscore_object_make_function_with_callback API. Thus the need of
  * jscore_init, to setup the GTree.
  */
-GTree *native_callback_tree = NULL;
+static GTree *native_callback_tree = NULL;
+static GJSCContext *global_context = NULL;
+static GJSCObject *global_object = NULL;
 
-gint tree_compare_func(gconstpointer a, gconstpointer b) {
+static gint
+tree_compare_func(gconstpointer a, gconstpointer b)
+{
   if (a < b)
     return -1;
   if (a > b)
     return 1;
   return 0;
-}
-
-void
-jscore_init()
-{
-  native_callback_tree = g_tree_new(tree_compare_func);
 }
 
 static JSValueRef
@@ -33,7 +31,7 @@ internal_native_bridge (JSContextRef ctx,
 			const JSValueRef args[],
 			JSValueRef *exception)
 {
-  g_message("[InternalNative] function: %p, args: %d, this: %p", function, n_args);
+  //g_message("[InternalNative] function: %p, args: %d, this: %p", function, n_args);
   GJSCNativeCallback callback = g_tree_lookup(native_callback_tree, (gconstpointer) function);
 
   if (!callback) {
@@ -69,6 +67,33 @@ internal_native_bridge (JSContextRef ctx,
   return NULL;
 }
 
+void
+jscore_init()
+{
+  native_callback_tree = g_tree_new(tree_compare_func);
+}
+
+GJSCContext *
+jscore_context_get_default()
+{
+  if (global_context == NULL) {
+    global_context = g_new0(GJSCContext, 1);
+    global_context->instance = JSGlobalContextCreate(NULL);
+  }
+  return global_context;
+}
+
+GJSCObject*
+jscore_context_get_global_object(GJSCContext *ctx)
+{
+  if (global_object == NULL) {
+    global_object = g_new0(GJSCObject, 1);
+    global_object->context = ctx->instance;
+    global_object->instance = JSContextGetGlobalObject(ctx->instance);
+  }
+  return global_object;
+}
+
 GJSCValue *
 jscore_context_evaluate_script(JSContextRef ctx, gchar *script) {
   JSStringRef str_script = JSStringCreateWithUTF8CString(script);
@@ -85,6 +110,7 @@ jscore_context_evaluate_script(JSContextRef ctx, gchar *script) {
 gboolean
 jscore_object_has_property(GJSCObject *obj, const gchar *property_name)
 {
+  //g_message("Checking for property %s on object %p at context %p", property_name, obj->instance, obj->context);
   JSStringRef pname = JSStringCreateWithUTF8CString(property_name);
 
   gboolean result = JSObjectHasProperty(obj->context, obj->instance, pname);
@@ -97,6 +123,7 @@ jscore_object_has_property(GJSCObject *obj, const gchar *property_name)
 GJSCValue *
 jscore_object_get_property(GJSCObject *obj, const gchar *property_name)
 {
+  //g_message("Getting property %s on object %p at context %p", property_name, obj->instance, obj->context);
   JSStringRef pname = JSStringCreateWithUTF8CString(property_name);
   GJSCValue *result = g_new0(GJSCValue, 1);
 
@@ -130,6 +157,7 @@ jscore_object_make_function_with_callback(GJSCObject *obj,
 void
 jscore_object_set_property(GJSCObject *obj, const gchar *property_name, GJSCValue *property_value)
 {
+  //g_message("Setting property %s on object %p at context %p", property_name, obj->instance, obj->context);
   JSStringRef pname = JSStringCreateWithUTF8CString(property_name);
 
   JSObjectSetProperty(obj->context, obj->instance, pname, property_value->instance,
@@ -140,6 +168,7 @@ jscore_object_set_property(GJSCObject *obj, const gchar *property_name, GJSCValu
 
 void
 jscore_object_set_property_from_object(GJSCObject *obj, const gchar *property_name, GJSCObject *function) {
+  //g_message("Setting property %s on object %p at context %p", property_name, obj->instance, obj->context);
   JSStringRef pname = JSStringCreateWithUTF8CString(property_name);
 
   JSObjectSetProperty(obj->context, obj->instance, pname, (JSValueRef)function->instance,
@@ -151,14 +180,31 @@ jscore_object_set_property_from_object(GJSCObject *obj, const gchar *property_na
 void
 jscore_object_set_property_from_string(GJSCObject *obj, const gchar *property_name, gchar *property_value)
 {
+  //g_message("Setting property %s on object %p at context %p", property_name, obj->instance, obj->context);
   JSStringRef pname = JSStringCreateWithUTF8CString(property_name);
   JSStringRef str_pvalue = JSStringCreateWithUTF8CString(property_value);
   JSValueRef pvalue = JSValueMakeString(obj->context, str_pvalue);
+  JSValueRef err = NULL;
 
-  JSObjectSetProperty(obj->context, obj->instance, pname, pvalue, kJSPropertyAttributeReadOnly, NULL);
+  JSObjectSetProperty(obj->context, obj->instance, pname, pvalue, kJSPropertyAttributeReadOnly, &err);
+  if (err != NULL) {
+    g_message("Error setting property");
+  }
 
   JSStringRelease(pname);
   JSStringRelease(str_pvalue);
+}
+
+GJSCValue *
+jscore_value_new_from_json(gchar *json)
+{
+  JSStringRef str_json = JSStringCreateWithUTF8CString(json);
+  JSValueRef value = JSValueMakeFromJSONString(global_context->instance, str_json);
+  GJSCValue *result = g_new0(GJSCValue, 1);
+  result->context = global_context->instance;
+  result->instance = value;
+
+  return result;
 }
 
 gchar *

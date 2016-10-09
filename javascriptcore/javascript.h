@@ -4,6 +4,10 @@
 #include <glib.h>
 #include <JavaScriptCore/JavaScript.h>
 
+typedef struct _GJSCContext {
+  JSContextRef instance;
+} GJSCContext;
+
 typedef struct _GJSCObject {
   JSContextRef context;
   JSObjectRef instance;
@@ -19,12 +23,20 @@ typedef GJSCValue *(*GJSCNativeCallback) (GJSCObject *function, GJSCObject *this
 void
 jscore_init();
 
-void
-jscore_value_new(JSValueRef instance);
+GJSCValue *
+jscore_value_new_from_json(gchar *json);
 
 gchar *
 jscore_value_as_string(GJSCValue *value);
 
+//JSContextRef
+GJSCContext*
+jscore_context_get_default();
+
+//JSObjectRef
+GJSCObject*
+jscore_context_get_global_object(GJSCContext *ctx);
+//jscore_context_get_global_object(JSContextRef ctx);
 
 GJSCValue *jscore_context_evaluate_script(JSContextRef ctx, gchar *script);
 
