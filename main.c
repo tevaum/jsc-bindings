@@ -3,17 +3,6 @@
 
 #include "javascriptcore/javascript.h"
 
-static JSValueRef
-native_bridge (JSContextRef ctx,
-	       JSObjectRef function,
-	       JSObjectRef this,
-	       size_t n_args,
-	       const JSValueRef args[],
-	       JSValueRef *exception)
-{
-  g_message("[Native] function: %p, args: %d, this: %p", function, n_args, this);
-}
-
 static GJSCValue *
 huvsnivs (GJSCObject *function,
 	  GJSCObject *this,
