@@ -39,7 +39,7 @@ nivsnow (GJSCObject *function,
 gint
 main (gint argv, gchar **argc)
 {
-  // Initializing the library (will done by WebKit directly)
+  // Initializing the library (will be done by WebKit directly)
   jscore_init();
 
   // Retrieving the main context (already done by WebKit)
