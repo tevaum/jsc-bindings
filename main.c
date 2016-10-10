@@ -7,6 +7,8 @@
  * This is a native callback that will be exposed
  * as a javascript function. Note that there's no
  * JavaScriptCore types referenced here.
+ * It returns an array used by the javascript
+ * code executed at the end of the program.
  */
 static GJSCValue *
 huvsnivs (GJSCObject *function,
@@ -49,6 +51,7 @@ main (gint argv, gchar **argc)
 
   // Retrieving the main context (already done by WebKit)
   GJSCContext *context = jscore_context_get_default();
+
   // and the global object
   GJSCObject *obj = jscore_context_get_global_object(context);
   
@@ -73,8 +76,21 @@ main (gint argv, gchar **argc)
   GJSCObject *nivsref = jscore_object_make_function_with_callback(obj, "nivsnow", nivsnow);
 
   // as we associated our callbacks with the global object, they can be called as global functions
-  //jscore_context_evaluate_script(context, "huvsnivs(); nivsnow(name, name, name, name);");
-  jscore_context_evaluate_script(context->instance, "var data = huvsnivs(); data.map(function (i) {nivsnow(i.uri);});");
+  GError *err = NULL;
+  jscore_context_evaluate_script(context->instance, "var data = huvsnivs(); data.map(function (i) {nivsnow(i.uri);});", &err);
+  if (err != NULL) {
+    g_warning("Error executing script: %s", err->message);
+    g_error_free(err);
+    err = NULL;
+  }
+
+  // this script will generate an error
+  jscore_context_evaluate_script(context->instance, "return;", &err);
+  if (err != NULL) {
+    g_warning("Error executing script: %s", err->message);
+    g_error_free(err);
+    err = NULL;
+  }
 
   g_free(huvsref);
   g_free(nivsref);

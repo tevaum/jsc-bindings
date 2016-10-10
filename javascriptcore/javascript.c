@@ -1,5 +1,19 @@
 #include "javascript.h"
 
+#define JSCORE_ERROR jscore_error_quark ()
+
+static GJSCObject *jscore_object_new_for(JSObjectRef);
+
+enum JSCoreError {
+  JSCORE_ERROR_INVALIDSYNTAX
+};
+
+GQuark
+jscore_error_quark (void)
+{
+  return g_quark_from_static_string("jscore-error-quark");
+}
+
 /**
  * To be able to use our own callbacks without referencing JavaScriptCore
  * types directly on the client code, I created a JavaScriptCore compatible
@@ -95,15 +109,34 @@ jscore_context_get_global_object(GJSCContext *ctx)
 }
 
 GJSCValue *
-jscore_context_evaluate_script(JSContextRef ctx, gchar *script) {
+jscore_context_evaluate_script(JSContextRef ctx, gchar *script, GError **error) {
   JSStringRef str_script = JSStringCreateWithUTF8CString(script);
   GJSCValue *result = g_new0(GJSCValue, 1);
-  JSValueRef ret = JSEvaluateScript(ctx, str_script, NULL, NULL, 0, NULL);
+  JSValueRef err = NULL;
+  JSValueRef ret = JSEvaluateScript(ctx, str_script, NULL, NULL, 0, &err);
+
+  if (err != NULL) {
+    GJSCObject *gerr = jscore_object_new_for(JSValueToObject(ctx, err, NULL));
+    GJSCValue *gmessage = jscore_object_get_property(gerr, "message");
+    gchar *message = jscore_value_as_string(gmessage);
+
+    g_set_error(error, JSCORE_ERROR, JSCORE_ERROR_INVALIDSYNTAX,
+		"Syntax error: %s", message);
+    return NULL;
+  }
 
   result->context = ctx;
   result->instance = ret;
 
   JSStringRelease(str_script);
+  return result;
+}
+
+static GJSCObject *
+jscore_object_new_for(JSObjectRef obj) {
+  GJSCObject *result = g_new0(GJSCObject, 1);
+  result->context = global_context->instance;
+  result->instance = obj;
   return result;
 }
 
@@ -184,12 +217,8 @@ jscore_object_set_property_from_string(GJSCObject *obj, const gchar *property_na
   JSStringRef pname = JSStringCreateWithUTF8CString(property_name);
   JSStringRef str_pvalue = JSStringCreateWithUTF8CString(property_value);
   JSValueRef pvalue = JSValueMakeString(obj->context, str_pvalue);
-  JSValueRef err = NULL;
 
-  JSObjectSetProperty(obj->context, obj->instance, pname, pvalue, kJSPropertyAttributeReadOnly, &err);
-  if (err != NULL) {
-    g_message("Error setting property");
-  }
+  JSObjectSetProperty(obj->context, obj->instance, pname, pvalue, kJSPropertyAttributeReadOnly, NULL);
 
   JSStringRelease(pname);
   JSStringRelease(str_pvalue);
@@ -211,10 +240,10 @@ gchar *
 jscore_value_as_string(GJSCValue *value)
 {
   JSStringRef str_value = JSValueToStringCopy(value->context, value->instance, NULL);
-  gchar *buff = (gchar *)g_malloc(256);
+  gchar buff[256];
 
   JSStringGetUTF8CString(str_value, buff, 255);
   JSStringRelease(str_value);
 
-  return buff;
+  return g_strdup(buff);
 }
