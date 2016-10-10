@@ -109,14 +109,14 @@ jscore_context_get_global_object(GJSCContext *ctx)
 }
 
 GJSCValue *
-jscore_context_evaluate_script(JSContextRef ctx, gchar *script, GError **error) {
+jscore_context_evaluate_script(GJSCContext *ctx, gchar *script, GError **error) {
   JSStringRef str_script = JSStringCreateWithUTF8CString(script);
   GJSCValue *result = g_new0(GJSCValue, 1);
   JSValueRef err = NULL;
-  JSValueRef ret = JSEvaluateScript(ctx, str_script, NULL, NULL, 0, &err);
+  JSValueRef ret = JSEvaluateScript(ctx->instance, str_script, NULL, NULL, 0, &err);
 
   if (err != NULL) {
-    GJSCObject *gerr = jscore_object_new_for(JSValueToObject(ctx, err, NULL));
+    GJSCObject *gerr = jscore_object_new_for(JSValueToObject(ctx->instance, err, NULL));
     GJSCValue *gmessage = jscore_object_get_property(gerr, "message");
     gchar *message = jscore_value_as_string(gmessage);
 
@@ -125,7 +125,7 @@ jscore_context_evaluate_script(JSContextRef ctx, gchar *script, GError **error) 
     return NULL;
   }
 
-  result->context = ctx;
+  result->context = ctx->instance;
   result->instance = ret;
 
   JSStringRelease(str_script);

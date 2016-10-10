@@ -77,7 +77,7 @@ main (gint argv, gchar **argc)
 
   // as we associated our callbacks with the global object, they can be called as global functions
   GError *err = NULL;
-  jscore_context_evaluate_script(context->instance, "var data = huvsnivs(); data.map(function (i) {nivsnow(i.uri);});", &err);
+  jscore_context_evaluate_script(context, "var data = huvsnivs(); data.map(function (i) {nivsnow(i.uri);});", &err);
   if (err != NULL) {
     g_warning("Error executing script: %s", err->message);
     g_error_free(err);
@@ -85,7 +85,7 @@ main (gint argv, gchar **argc)
   }
 
   // this script will generate an error
-  jscore_context_evaluate_script(context->instance, "return;", &err);
+  jscore_context_evaluate_script(context, "return;", &err);
   if (err != NULL) {
     g_warning("Error executing script: %s", err->message);
     g_error_free(err);

@@ -38,7 +38,7 @@ GJSCObject*
 jscore_context_get_global_object(GJSCContext *ctx);
 //jscore_context_get_global_object(JSContextRef ctx);
 
-GJSCValue *jscore_context_evaluate_script(JSContextRef ctx, gchar *script, GError **error);
+GJSCValue *jscore_context_evaluate_script(GJSCContext *ctx, gchar *script, GError **error);
 
 GJSCObject *
 jscore_object_make_function_with_callback(GJSCObject *obj,
